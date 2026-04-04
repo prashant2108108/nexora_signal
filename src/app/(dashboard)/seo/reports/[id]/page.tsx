@@ -9,6 +9,7 @@ import { LinkAnalysisCard } from '@/features/seo/components/LinkAnalysisCard'
 import { TechnicalSeoCard } from '@/features/seo/components/TechnicalSeoCard'
 import { PageSpeedCard } from '@/features/seo/components/PageSpeedCard'
 import { KeywordDensityChart } from '@/features/seo/components/KeywordDensityChart'
+import { FixGuide } from '@/features/seo/components/FixGuide'
 import { ArrowLeft, Share2, Download } from 'lucide-react'
 
 export default function ReportDetailPage() {
@@ -35,9 +36,9 @@ export default function ReportDetailPage() {
   if (!report) return <div className="p-12 text-center text-amber-500 font-bold">No report data available.</div>
 
   const isV2 = report.version === 'v2'
-  const technicalData = isV2 ? report.advanced?.technical : null
-  const pageSpeedData = report.pageSpeed || report.data?.pageSpeed
-  const keywordData = report.keywords || report.data?.keywords || []
+  const technicalData = isV2 ? (report.advanced?.technical || report.data?.technical) : null
+  const pageSpeedData = report.pageSpeed || report.data?.pageSpeed || report.advanced?.performance
+  const keywordData = report.keywords || report.data?.keywords || report.advanced?.insights?.content?.keywordDensity || []
 
   return (
     <div className="max-w-6xl mx-auto pb-20 px-4">
@@ -71,6 +72,10 @@ export default function ReportDetailPage() {
         <SeoScore report={report} />
         
         {technicalData && <TechnicalSeoCard data={technicalData} />}
+        
+        {technicalData?.issues && technicalData.issues.length > 0 && (
+          <FixGuide issues={technicalData.issues} />
+        )}
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-8">

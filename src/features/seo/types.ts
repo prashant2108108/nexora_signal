@@ -1,8 +1,22 @@
 export interface SeoIssue {
   id: string
   type: 'error' | 'warning' | 'info'
+  severity: 'critical' | 'high' | 'medium' | 'low'
+  effort: 'low' | 'medium' | 'high'
+  impact: 'low' | 'high'
+  impactScore: number // 0-100
   message: string
   details?: string
+  fix?: string      // How to fix it (dynamic context-aware)
+  example?: string  // Code example or reference
+  step?: string     // Which step produced this issue
+}
+
+export interface TechnicalScoreBreakdown {
+  indexing: number
+  sitemap: number
+  canonical: number
+  urlHealth: number
 }
 
 export interface KeywordDensity {
@@ -113,23 +127,85 @@ export interface SeoInsights {
   }
 }
 
+export interface RobotsDetails {
+  exists: boolean
+  status: 'ok' | 'missing' | 'error'
+  url: string | null
+  content: string | null
+  allowedPaths: string[]
+  disallowedPaths: string[]
+  sitemaplinks: string[]
+  issues: string[]
+}
+
+export interface SitemapDetails {
+  exists: boolean
+  status: 'ok' | 'missing' | 'error'
+  url: string | null
+  totalUrls: number
+  sampleUrls: string[]
+  isIndex: boolean
+  lastModified: string | null
+  issues: string[]
+}
+
+export interface CanonicalDetails {
+  exists: boolean
+  url: string | null
+  isSelfReferencing: boolean
+  isCrossDomain: boolean
+  matchesCurrent: boolean
+  issues: string[]
+}
+
+export interface UrlHealthDetails {
+  isSeoFriendly: boolean
+  length: number
+  depth: number
+  containsKeywords: boolean
+  hasHyphens: boolean
+  hasUnderscores: boolean
+  hasStopWords: boolean
+  issues: string[]
+}
+
 export interface TechnicalSeoData {
   indexing: {
-    robotsTxt: boolean
-    sitemap: boolean
+    robots: RobotsDetails
+    sitemap: SitemapDetails
     indexable: boolean
+    metaRobots: string | null
+    xRobotsTag: string | null
+    stats: {
+      urlsAnalyzed: number
+      sitemapFilesParsed: number
+      robotsFetched: boolean
+      scanDurationMs: number
+      maxScanTimeReached: boolean
+    }
   }
-  canonical: {
-    exists: boolean
-    multiple: boolean
-    url: string | null
+  canonical: CanonicalDetails & {
+    clusters?: { [target: string]: { urls: string[], confidence: number } } 
   }
-  url: {
-    length: number
-    isSeoFriendly: boolean
-    depth: number
+  url: UrlHealthDetails & {
+    normalizedUrl: string
+    urlHash: string
+    depthDistribution: { [level: string]: number }
+    depthInsight?: string
   }
-  issues: string[]
+  scoreBreakdown: TechnicalScoreBreakdown
+  progress: {
+    steps: { name: string; status: 'pending' | 'completed' | 'error' | 'skipped'; message?: string }[]
+    currentStep: string
+    percent: number
+  }
+  scanConfidence: 'high' | 'medium' | 'low'
+  trend: 'improving' | 'declining' | 'stable'
+  previousScore?: number
+  scoreChange?: number
+  issues: SeoIssue[]
+  completedSteps: string[]
+  skippedSteps: string[]
 }
 
 export interface SeoReportV2 {
@@ -145,6 +221,9 @@ export interface SeoReportV2 {
     warnings: number
     passed: number
   }
+  trend?: 'improving' | 'declining' | 'stable'
+  scoreChange?: number
+  previousScore?: number
 }
 
 export interface ScoreBreakdown {
@@ -187,7 +266,7 @@ export interface SeoReport {
   scoreBreakdown?: ScoreBreakdown
   insights?: SeoInsights
   recommendations: SeoRecommendation[]
-  status: "Excellent" | "Good" | "Needs Improvement" | "Poor"
+  status: "Excellent" | "Good" | "Needs Improvement" | "Poor" | "pending" | "completed" | "failed" | "completed_with_warnings"
   
   // V2 Structure
   version?: "v2"

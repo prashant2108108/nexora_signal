@@ -58,7 +58,7 @@ export async function analyzeUrl(url: string): Promise<SeoAnalysisResult> {
       }
     }
 
-    const { score, partialFailure, advanced, version, links, images, pageSpeed, keywords } = result as any
+    const { score, partialFailure, advanced, version, data } = result as any
     const processingTime = (result as any).processing_time_ms
     
     return {
@@ -73,12 +73,12 @@ export async function analyzeUrl(url: string): Promise<SeoAnalysisResult> {
         status: partialFailure ? "completed_with_warnings" : "completed",
         processingTimeMs: processingTime,
         
-        // Legacy/Top-level mapping
-        links,
-        images,
-        pageSpeed,
-        keywords,
-        data: (result as any).data,
+        // Final Mapping from Consolidated Data
+        links: data?.links || (result as any).links,
+        images: data?.images || (result as any).images,
+        pageSpeed: data?.pageSpeed || (result as any).pageSpeed,
+        keywords: data?.keywords || (result as any).keywords,
+        data: data || (result as any).data,
         issuesSummary: advanced?.issuesSummary
       } as any
     }

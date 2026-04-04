@@ -1,10 +1,12 @@
 import { SeoReport, SeoReportV2 } from '../types'
 import { clsx } from 'clsx'
+import { TrendingUp, TrendingDown } from 'lucide-react'
 
 export function SeoScore({ report: rawReport }: { report: any }) {
   const isV2 = rawReport.version === 'v2'
-  const report = isV2 ? (rawReport as { advanced: SeoReportV2 }).advanced : (rawReport as SeoReport)
-  const insights = isV2 ? (rawReport as { advanced: SeoReportV2 }).advanced.insights : null
+  const advanced = (rawReport as any).advanced
+  const report = isV2 ? advanced : (rawReport as SeoReport)
+  const insights = isV2 ? advanced?.insights : null
 
   const getColorClass = (score: number) => {
     if (score > 80) return 'text-emerald-600'
@@ -35,14 +37,28 @@ export function SeoScore({ report: rawReport }: { report: any }) {
           <span className="w-8 h-[1px] bg-gray-200" />
         </h3>
 
-        <div className={`text-8xl font-black tracking-tighter sm:text-9xl ${getColorClass(score)} leading-none`}>
+        <div className={`text-8xl font-black tracking-tighter sm:text-9xl ${getColorClass(score)} leading-none flex items-center`}>
           {score}
+          {isV2 && (report as SeoReportV2).trend && (
+            <div className="ml-4 flex flex-col items-center">
+              {(report as SeoReportV2).trend === 'improving' ? (
+                <TrendingUp className="w-8 h-8 text-emerald-500" />
+              ) : (report as SeoReportV2).trend === 'declining' ? (
+                <TrendingDown className="w-8 h-8 text-red-500" />
+              ) : null}
+              <span className={`text-[10px] font-black uppercase tracking-tighter ${
+                (report as SeoReportV2).trend === 'improving' ? 'text-emerald-500' : 'text-gray-400'
+              }`}>
+                {(report as SeoReportV2).scoreChange! > 0 ? `+${(report as SeoReportV2).scoreChange}` : (report as SeoReportV2).scoreChange}
+              </span>
+            </div>
+          )}
           <span className="text-3xl text-gray-300 font-medium ml-2 tabular-nums">/100</span>
         </div>
         
         {isV2 && (
-          <div className="mt-4 px-4 py-1.5 rounded-full bg-white/80 dark:bg-black/20 border border-gray-100 dark:border-white/10 shadow-sm">
-             <span className={`text-sm font-bold ${(report as SeoReportV2).pageHealth === 'Excellent' ? 'text-emerald-500' : 'text-amber-500'}`}>
+          <div className="mt-4 px-4 py-1.5 rounded-full bg-white/80 dark:bg-black/20 border border-gray-100 dark:border-white/10 shadow-sm flex items-center gap-2">
+             <span className={`text-sm font-black uppercase tracking-widest ${(report as SeoReportV2).pageHealth === 'Excellent' ? 'text-emerald-500' : 'text-amber-500'}`}>
                {(report as SeoReportV2).pageHealth}
              </span>
           </div>
@@ -51,7 +67,7 @@ export function SeoScore({ report: rawReport }: { report: any }) {
         {breakdown && (
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 w-full mt-12 border-t border-gray-100/50 pt-10">
             {Object.entries(breakdown).map(([key, val]) => (
-              <div key={key} className="flex flex-col items-center group/item">
+              <div key={key} className="flex flex-col items-center group/item hover:scale-110 transition-transform">
                 <div className="relative w-14 h-14 flex items-center justify-center mb-3">
                   <svg className="w-full h-full -rotate-90">
                     <circle cx="28" cy="28" r="24" fill="none" stroke="currentColor" strokeWidth="4" className="text-gray-100 dark:text-zinc-800" />

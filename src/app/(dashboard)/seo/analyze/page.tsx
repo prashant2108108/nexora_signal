@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useSeoAnalysis } from '@/features/seo/hooks/useSeoAnalysis'
 import { UrlInput } from '@/features/seo/components/UrlInput'
 import { SeoScore } from '@/features/seo/components/SeoScore'
@@ -8,6 +10,8 @@ import { KeywordDensityChart } from '@/features/seo/components/KeywordDensityCha
 import { PageSpeedCard } from '@/features/seo/components/PageSpeedCard'
 import { LinkAnalysisCard } from '@/features/seo/components/LinkAnalysisCard'
 import { ImageSeoReport } from '@/features/seo/components/ImageSeoReport'
+import { TechnicalSeoCard } from '@/features/seo/components/TechnicalSeoCard'
+import { FixGuide } from '@/features/seo/components/FixGuide'
 import { useUserRole } from '@/features/auth/hooks/useUserRole'
 import Link from 'next/link'
 
@@ -45,14 +49,37 @@ export default function SeoAnalyzePage() {
       {data?.success && data.report && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="md:col-span-2 space-y-6">
-            <SeoScore report={data.report} />
-            <LinkAnalysisCard data={data.report.links} loading={isPending} />
-            <ImageSeoReport data={data.report.images} loading={isPending} />
-            <IssuesList issues={data.report.issues} />
+            {data.report.status === 'pending' ? (
+              <div className="p-12 border-2 border-dashed border-gray-100 rounded-3xl flex flex-col items-center justify-center text-center bg-gray-50/50">
+                <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-6" />
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Analysis in Progress</h3>
+                <p className="text-gray-500 max-w-sm">We're already analyzing this URL. This usually takes 15-30 seconds. Please check back in a moment.</p>
+                <div className="mt-8">
+                   <Link href="/seo" className="text-indigo-600 font-bold hover:underline">View All Reports →</Link>
+                </div>
+              </div>
+            ) : (
+              <>
+                <SeoScore report={data.report} />
+                {data.report.advanced?.technical && (
+                  <TechnicalSeoCard data={data.report.advanced.technical} />
+                )}
+                {data.report.advanced?.technical?.issues && data.report.advanced.technical.issues.length > 0 && (
+                  <FixGuide issues={data.report.advanced.technical.issues} />
+                )}
+                <LinkAnalysisCard data={data.report.links} loading={isPending} />
+                <ImageSeoReport data={data.report.images} loading={isPending} />
+                <IssuesList issues={data.report.issues || []} />
+              </>
+            )}
           </div>
           <div className="space-y-6">
-            <KeywordDensityChart keywords={data.report.keywords} />
-            <PageSpeedCard metrics={data.report.pageSpeed} />
+            {data.report.status !== 'pending' && (
+              <>
+                <KeywordDensityChart keywords={data.report.keywords} />
+                <PageSpeedCard metrics={data.report.pageSpeed} />
+              </>
+            )}
           </div>
         </div>
       )}

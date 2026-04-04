@@ -4,7 +4,8 @@ import {
   SeoInsights, 
   BrokenLink, 
   SeoRecommendation,
-  TechnicalSeoData
+  TechnicalSeoData,
+  SeoIssue
 } from '../../features/seo/types'
 
 export function calculateSeoScore(data: any) {
@@ -25,26 +26,18 @@ export function calculateSeoScore(data: any) {
 
   // 1. Meta Score (20%)
   let metaScore = 100
-  let metaReason = "Perfect meta structure"
   if (!data.meta?.title) { metaScore -= 50; criticalCount++ }
   else if (data.meta.title.length < 30 || data.meta.title.length > 60) { metaScore -= 20; warningCount++ }
   if (!data.meta?.description) { metaScore -= 50; criticalCount++ }
   else if (data.meta.description.length < 120 || data.meta.description.length > 160) { metaScore -= 20; warningCount++ }
-  
   breakdown.meta = Math.max(0, metaScore)
-  if (metaScore < 100) metaReason = metaScore < 50 ? "Critical meta issues detected" : "Meta tags need optimization"
-  scoreDetails.push({ section: "meta", score: breakdown.meta, reason: metaReason })
+  scoreDetails.push({ section: "meta", score: breakdown.meta, reason: metaScore < 100 ? "Meta tags need optimization" : "Perfect meta structure" })
 
   // 2. Headings Score (10%)
   let headScore = 100
   if (data.headings?.h1Count !== 1) { headScore -= 50; criticalCount++ }
   if (data.headings?.h2Count === 0) { headScore -= 30; warningCount++ }
   breakdown.headings = Math.max(0, headScore)
-  scoreDetails.push({ 
-    section: "headings", 
-    score: breakdown.headings, 
-    reason: headScore === 100 ? "Optimal heading hierarchy" : "Heading structure issues" 
-  })
 
   // 3. Content Score (20%)
   let contentScore = 100
@@ -52,36 +45,47 @@ export function calculateSeoScore(data: any) {
   if (wordCount < 300) { contentScore -= 40; warningCount++ }
   if (wordCount < 100) { contentScore -= 30; criticalCount++ }
   breakdown.content = Math.max(0, contentScore)
-  scoreDetails.push({ section: "content", score: breakdown.content, reason: contentScore < 70 ? "Thin content detected" : "Good content depth" })
 
   // 4. Links Score (10%)
   let linkScore = 100
   const brokenCount = data.links?.brokenLinks?.length || 0
   if (brokenCount > 0) { linkScore -= (brokenCount * 10); criticalCount += brokenCount }
   breakdown.links = Math.max(0, linkScore)
-  scoreDetails.push({ section: "links", score: breakdown.links, reason: brokenCount > 0 ? `${brokenCount} broken links found` : "All links healthy" })
 
   // 5. Images Score (10%)
   let imgScore = 100
   const missingAlt = data.images?.missingAltCount || 0
   if (missingAlt > 0) { imgScore -= Math.min(50, missingAlt * 5); warningCount += missingAlt }
   breakdown.images = Math.max(0, imgScore)
-  scoreDetails.push({ section: "images", score: breakdown.images, reason: missingAlt > 0 ? `${missingAlt} images missing alt tags` : "Images fully optimized" })
 
   // 6. Performance Score (15%)
   let perfScore = data.performance?.score || 50
   if (perfScore < 50) criticalCount++
   else if (perfScore < 90) warningCount++
   breakdown.performance = perfScore
-  scoreDetails.push({ section: "performance", score: perfScore, reason: perfScore > 80 ? "Fast load times" : "Performance needs optimization" })
 
-  // 7. Technical Score (15%)
-  let techScore = 100
-  if (!data.technical?.indexing?.robotsTxt) techScore -= 20
-  if (!data.technical?.indexing?.sitemap) techScore -= 20
-  if (!data.technical?.indexing?.indexable) { techScore -= 50; criticalCount++ }
-  breakdown.technical = Math.max(techScore, 0)
-  scoreDetails.push({ section: "technical", score: breakdown.technical, reason: techScore < 80 ? "Technical indexing issues" : "Search engines can crawl easily" })
+  // 7. Technical Score (15%) - PRO WEIGHTED
+  const tech = data.technical as TechnicalSeoData;
+  if (tech && tech.scoreBreakdown) {
+    const { indexing, sitemap, canonical, urlHealth } = tech.scoreBreakdown;
+    const weightedTechScore = Math.round(
+      (indexing * 0.3) +
+      (sitemap * 0.25) +
+      (canonical * 0.25) +
+      (urlHealth * 0.2)
+    );
+    breakdown.technical = weightedTechScore;
+  } else {
+    breakdown.technical = 70; // Baseline
+  }
+  
+  // Count technical issues
+  if (tech?.issues) {
+    tech.issues.forEach(i => {
+      if (i.severity === 'critical') criticalCount++;
+      else if (i.severity === 'high' || i.severity === 'medium') warningCount++;
+    });
+  }
 
   // Weighted Final Score
   const totalScore = Math.round(
@@ -151,36 +155,54 @@ export function calculateSeoScore(data: any) {
     score: totalScore,
     advanced: {
       totalScore,
-      pageHealth: totalScore > 80 ? "Excellent" : totalScore > 60 ? "Good" : totalScore > 40 ? "Needs Improvement" : "Poor",
+      pageHealth: totalScore > 85 ? "Excellent" : totalScore > 70 ? "Good" : totalScore > 50 ? "Needs Improvement" : "Poor",
       breakdown,
       insights,
-      technical: data.technical,
-      recommendations: generateRecommendations(insights, breakdown),
+      technical: tech,
+      recommendations: generateRecommendations(insights, breakdown, tech),
       scoreDetails,
       issuesSummary: {
         critical: criticalCount,
         warnings: warningCount,
-        passed: passedCount || 10 // Mock for now
+        passed: passedCount || 10 
       }
     }
   }
 }
 
-function generateRecommendations(insights: SeoInsights, breakdown: ScoreBreakdown): SeoRecommendation[] {
+function generateRecommendations(insights: SeoInsights, breakdown: ScoreBreakdown, tech?: TechnicalSeoData): SeoRecommendation[] {
   const recs: SeoRecommendation[] = []
   
   if (breakdown.meta < 80) {
-    recs.push({ type: "meta", message: "Optimize your meta tags for better CTR.", priority: "high" })
+    recs.push({ type: "meta", message: "Optimize your meta tags for better search visibility.", priority: "high" })
   }
   if (breakdown.content < 70) {
-    recs.push({ type: "content", message: "Write more relevant content (min 300 words).", priority: "high" })
+    recs.push({ type: "content", message: "Increase content depth (min 300 words recommended).", priority: "high" })
   }
   if (breakdown.performance < 50) {
-    recs.push({ type: "performance", message: "Improve server response time and optimize assets.", priority: "high" })
+    recs.push({ type: "performance", message: "Improve load speed by optimizing assets and server response.", priority: "high" })
   }
-  if (breakdown.technical < 80) {
-    recs.push({ type: "meta", message: "Fix robots.txt and sitemap issues.", priority: "medium" })
+  
+  // Technical Recommendations from the granular issues
+  if (tech?.issues) {
+    tech.issues.slice(0, 3).forEach(issue => {
+      recs.push({
+        type: "technical" as any,
+        message: issue.message,
+        priority: issue.severity === 'critical' || issue.severity === 'high' ? 'high' : 'medium'
+      });
+    });
   }
 
-  return recs.sort((a, b) => (a.priority === "high" ? -1 : 1))
+  if (breakdown.links < 90) {
+    recs.push({ type: "link", message: "Fix broken internal or external links.", priority: "medium" })
+  }
+  if (breakdown.images < 90) {
+    recs.push({ type: "image", message: "Add alt text to images for accessibility and SEO.", priority: "medium" })
+  }
+
+  return recs.sort((a, b) => {
+    const priorityMap = { high: 0, medium: 1, low: 2 }
+    return priorityMap[a.priority as keyof typeof priorityMap] - priorityMap[b.priority as keyof typeof priorityMap]
+  })
 }

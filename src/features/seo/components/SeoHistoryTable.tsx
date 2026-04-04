@@ -59,7 +59,7 @@ export function SeoHistoryTable() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50 bg-white">
-            {reports.map((report) => (
+            {reports.map((report: any) => (
               <tr key={report.id} className="hover:bg-gray-50/50 transition-colors group">
                 <td className="px-6 py-4">
                   <div className="flex flex-col">
@@ -83,16 +83,17 @@ export function SeoHistoryTable() {
                   ) : <span className="text-gray-300">--</span>}
                 </td>
                 <td className="px-6 py-4">
-                  {report.report?.advanced?.issuesSummary && (
+                  {/* Handle both V1 and V2 report structures */}
+                  {(report.report?.advanced?.issuesSummary || report.report?.data?.issuesSummary) && (
                     <div className="flex items-center gap-2">
-                       {(report.report.advanced.issuesSummary.critical || 0) > 0 && (
+                       {((report.report?.advanced?.issuesSummary?.critical || report.report?.data?.issuesSummary?.critical) || 0) > 0 && (
                          <span className="flex items-center gap-1 text-[10px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded">
-                           {report.report.advanced.issuesSummary.critical}
+                           {report.report?.advanced?.issuesSummary?.critical || report.report?.data?.issuesSummary?.critical}
                          </span>
                        )}
-                       {(report.report.advanced.issuesSummary.warnings || 0) > 0 && (
+                       {((report.report?.advanced?.issuesSummary?.warnings || report.report?.data?.issuesSummary?.warnings) || 0) > 0 && (
                          <span className="flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
-                           {report.report.advanced.issuesSummary.warnings}
+                           {report.report?.advanced?.issuesSummary?.warnings || report.report?.data?.issuesSummary?.warnings}
                          </span>
                        )}
                     </div>
