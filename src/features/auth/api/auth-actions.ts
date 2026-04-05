@@ -5,15 +5,19 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
 const getURL = () => {
-  // Use the SITE_URL if set (recommended), otherwise fallback to VERCEL_URL or localhost
-  let url =
-    process?.env?.NEXT_PUBLIC_SITE_URL ?? 
-    process?.env?.NEXT_PUBLIC_VERCEL_URL ?? 
-    'http://localhost:3000'
+  // Use environment variables if they exist
+  let url = process?.env?.NEXT_PUBLIC_SITE_URL ?? process?.env?.NEXT_PUBLIC_VERCEL_URL
   
-  // Ensure the URL starts with https:// unless it's localhost
-  if (!url.startsWith('http')) {
-    url = `https://${url}`
+  if (url) {
+    // Ensure the URL starts with https:// unless it's localhost
+    if (!url.startsWith('http')) {
+      url = `https://${url}`
+    }
+  } else {
+    // Fallback if no environment variables are found
+    url = process.env.NODE_ENV === 'production' 
+      ? 'https://nexora-signal-rouge.vercel.app' 
+      : 'http://localhost:3000'
   }
   
   // Ensure there's a trailing slash
