@@ -13,8 +13,21 @@ export async function createClient() {
       auth: { 
         getUser: async () => ({ data: { user: null }, error: null }),
         getSession: async () => ({ data: { session: null }, error: null }),
+        signUp: async () => ({ data: { user: null, session: null }, error: new Error('Supabase credentials missing on server') }),
+        signInWithPassword: async () => ({ data: { user: null, session: null }, error: new Error('Supabase credentials missing on server') }),
+        signOut: async () => ({ error: null }),
       },
-      from: () => ({ select: () => ({ single: () => ({ data: null, error: null }), eq: () => ({ single: () => ({ data: null, error: null }) }) }) })
+      from: () => ({ 
+        select: () => ({ 
+          single: () => ({ data: null, error: null }), 
+          eq: () => ({ 
+            single: () => ({ data: null, error: null }),
+            eq: () => ({ single: () => ({ data: null, error: null }) }) 
+          }) 
+        }),
+        insert: () => ({ select: () => ({ single: () => ({ data: null, error: null }) }) }),
+        update: () => ({ eq: () => ({ data: null, error: null }) }),
+      })
     } as any
   }
 
