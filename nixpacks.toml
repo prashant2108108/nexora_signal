@@ -4,7 +4,7 @@ nixPkgs = ["python311Full", "curl"]
 [phases.install]
 cmds = [
   "curl -sS https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py && python3 /tmp/get-pip.py --break-system-packages",
-  "python3 -m pip install -r requirements.txt --break-system-packages"
+  "python3 -m pip install -r crawler/requirements.txt --break-system-packages"
 ]
 
 [start]
