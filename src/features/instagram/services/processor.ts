@@ -123,7 +123,7 @@ export async function syncInstagramData() {
       }
     }
 
-    // 3. Sync Top Comments
+    // 3. Sync Comments + Replies
     const comments = await getInstagramComments(media.id);
     console.log(`[Instagram Sync] Fetched comments for ${media.id}: ${comments.length} items`);
     for (const comment of comments) {
@@ -132,10 +132,25 @@ export async function syncInstagramData() {
         media_id: media.id,
         text: comment.text,
         username: comment.username,
+        like_count: comment.like_count || 0,
         timestamp: comment.timestamp,
       });
       if (comErr) console.error(`[Instagram Sync] Error upserting comment ${comment.id}:`, comErr);
+
+      // Sync replies nested under each comment
+      const replies = comment.replies?.data || [];
+      for (const reply of replies) {
+        const { error: repErr } = await supabaseAdmin.from('instagram_comment_replies').upsert({
+          ig_id: reply.id,
+          comment_id: comment.id,
+          text: reply.text,
+          username: reply.username,
+          timestamp: reply.timestamp,
+        });
+        if (repErr) console.error(`[Instagram Sync] Error upserting reply ${reply.id}:`, repErr);
+      }
     }
+
   }
 
   console.log(`[Instagram Sync] All operations complete.`);

@@ -98,12 +98,12 @@ export async function getMediaInsights(mediaId: string): Promise<any[]> {
 }
 
 /**
- * Fetches comments for a specific media object.
+ * Fetches comments for a specific media object (includes like count and reply count).
  */
 export async function getInstagramComments(mediaId: string): Promise<any[]> {
   if (!INSTAGRAM_ACCESS_TOKEN) return [];
 
-  const url = `https://graph.instagram.com/${META_API_VERSION}/${mediaId}/comments?fields=id,text,username,timestamp`;
+  const url = `https://graph.instagram.com/${META_API_VERSION}/${mediaId}/comments?fields=id,text,username,timestamp,like_count,replies{id,text,username,timestamp}`;
 
   try {
     const response = await fetch(url, {

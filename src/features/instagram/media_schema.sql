@@ -23,10 +23,23 @@ create table if not exists public.instagram_comments (
   media_id text,
   text text,
   username text,
+  like_count integer default 0,
   timestamp timestamp with time zone,
   status text default 'pending',
   created_at timestamp with time zone default now()
 );
+
+-- 4. Comment Replies
+create table if not exists public.instagram_comment_replies (
+  id uuid default gen_random_uuid() primary key,
+  ig_id text unique not null,
+  comment_id text,
+  text text,
+  username text,
+  timestamp timestamp with time zone,
+  created_at timestamp with time zone default now()
+);
+
 
 -- 3. Instagram Insights
 create table if not exists public.instagram_insights (

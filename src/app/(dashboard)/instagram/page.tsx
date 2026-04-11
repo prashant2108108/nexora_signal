@@ -24,12 +24,17 @@ export default async function InstagramDashboardPage() {
   const [
     { data: messages, error: messagesError },
     { data: media, error: mediaError },
-    { data: insights, error: insightsError }
+    { data: insights, error: insightsError },
+    { data: comments },
+    { data: replies }
   ] = await Promise.all([
     supabase.from('instagram_messages').select('*').order('created_at', { ascending: false }),
     supabase.from('instagram_media').select('*').order('timestamp', { ascending: false }),
-    supabase.from('instagram_insights').select('*').order('end_time', { ascending: false }).limit(20)
+    supabase.from('instagram_insights').select('*').order('end_time', { ascending: false }).limit(20),
+    supabase.from('instagram_comments').select('*').order('timestamp', { ascending: false }),
+    supabase.from('instagram_comment_replies').select('*').order('timestamp', { ascending: false })
   ]);
+
 
   console.log('[Instagram Dashboard] Data Summary:', {
     messagesCount: messages?.length || 0,
@@ -171,7 +176,73 @@ export default async function InstagramDashboardPage() {
           </div>
         )}
       </div>
+      {/* Comments Section */}
+      <div>
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+          <MessageSquare className="w-5 h-5 text-blue-500" />
+          Post Comments & Replies
+        </h2>
+        {!comments || comments.length === 0 ? (
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-8 text-center">
+            <p className="text-slate-500 dark:text-zinc-400">No comments synced yet. Click &quot;Sync Now&quot; to fetch.</p>
+          </div>
+        ) : (
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden shadow-sm divide-y divide-slate-100 dark:divide-zinc-800">
+            {comments.map((c: any) => {
+              const post = media?.find((m: any) => m.ig_id === c.media_id);
+              const commentReplies = replies?.filter((r: any) => r.comment_id === c.ig_id) || [];
+              return (
+                <div key={c.id} className="px-6 py-4">
+                  {/* Comment Row */}
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0 mt-0.5">
+                      <User className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-semibold text-slate-900 dark:text-white">@{c.username}</span>
+                        {post && (
+                          <a href={post.permalink} target="_blank" rel="noopener noreferrer"
+                            className="text-xs text-purple-600 dark:text-purple-400 hover:underline">
+                            on &ldquo;{post.caption?.substring(0, 25) || 'post'}&rdquo;
+                          </a>
+                        )}
+                        <span className="text-xs text-slate-400 ml-auto">{new Date(c.timestamp).toLocaleString()}</span>
+                      </div>
+                      <p className="text-sm text-slate-700 dark:text-zinc-300 mt-1">{c.text}</p>
+                      <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-400">
+                        <span className="flex items-center gap-1"><Heart className="w-3 h-3 text-red-400" />{c.like_count || 0} likes</span>
+                        {commentReplies.length > 0 && (
+                          <span className="flex items-center gap-1"><MessageSquare className="w-3 h-3 text-blue-400" />{commentReplies.length} replies</span>
+                        )}
+                      </div>
+                      {/* Replies */}
+                      {commentReplies.length > 0 && (
+                        <div className="mt-3 pl-4 border-l-2 border-slate-100 dark:border-zinc-700 space-y-3">
+                          {commentReplies.map((r: any) => (
+                            <div key={r.id} className="flex items-start gap-2">
+                              <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
+                                <User className="w-3 h-3 text-slate-500" />
+                              </div>
+                              <div>
+                                <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">@{r.username}</span>
+                                <p className="text-xs text-slate-600 dark:text-zinc-400">{r.text}</p>
+                                <span className="text-[10px] text-slate-400">{new Date(r.timestamp).toLocaleString()}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
+
 
