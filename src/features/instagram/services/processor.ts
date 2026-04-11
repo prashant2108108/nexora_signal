@@ -5,7 +5,8 @@ import {
   getInstagramMedia, 
   getMediaInsights, 
   getInstagramComments,
-  getInstagramUsername
+  getInstagramUsername,
+  sendPrivateReply
 } from './graphApi';
 
 // Anon client for public webhook operations
@@ -69,6 +70,20 @@ async function handleIncomingComment(value: any) {
     username: from?.username,
     timestamp: new Date(timestamp * 1000).toISOString(),
   }, { onConflict: 'ig_id' });
+
+  // --- AUTOMATION LOGIC ---
+  // If comment contains keywords "send", "info", "link", or "details", send a private DM
+  const lowerText = text.toLowerCase();
+  const automationKeywords = ['send', 'info', 'link', 'details', 'check', 'price'];
+  
+  const shouldAutomate = automationKeywords.some(kw => lowerText.includes(kw));
+
+  if (shouldAutomate) {
+    console.log(`[Instagram Automation] Triggering private reply for comment ${id}`);
+    const automationMessage = `Hey @${from?.username || 'there'}! Thanks for your comment. Here is the link you requested: https://nexora.signal/details/${media_id}`;
+    
+    await sendPrivateReply(id, automationMessage);
+  }
 }
 
 /**

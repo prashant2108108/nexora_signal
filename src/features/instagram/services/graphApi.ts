@@ -161,4 +161,27 @@ export async function getInstagramUsername(igSid: string): Promise<string> {
   }
 }
 
+/**
+ * Sends a private DM as a reply to a public comment.
+ * Requires the 'instagram_manage_comments' permission.
+ */
+export async function sendPrivateReply(commentId: string, message: string): Promise<any> {
+  if (!INSTAGRAM_ACCESS_TOKEN) return null;
+
+  const url = `https://graph.instagram.com/${META_API_VERSION}/${commentId}/private_replies?message=${encodeURIComponent(message)}`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${INSTAGRAM_ACCESS_TOKEN}` },
+    });
+    const data = await response.json();
+    console.log(`[Instagram API] Private reply sent to comment ${commentId}:`, data);
+    return data;
+  } catch (error) {
+    console.error('[Instagram] sendPrivateReply failed:', error);
+    return null;
+  }
+}
+
 

@@ -29,12 +29,17 @@ export async function POST(req: NextRequest) {
       .digest('hex');
 
     if (sig !== expected) {
-      console.warn('[Instagram Webhook] Signature mismatch');
+      console.warn('[Instagram Webhook] Signature mismatch!');
+      console.warn('Received:', sig);
+      console.warn('Expected:', expected);
+      // For now, we will log the payload even if signature fails to see what's coming
+      // console.log('Payload:', rawBody);
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
     const payload = JSON.parse(rawBody);
-    
+    console.log('[Instagram Webhook] Received payload:', JSON.stringify(payload, null, 2));
+
     // We don't await the processing logic so we can respond immediately.
     processWebhookPayload(payload).catch((err) => {
       console.error('[Instagram Webhook] Async processing failed:', err);
