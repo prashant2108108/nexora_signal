@@ -54,4 +54,33 @@ export interface MetaReplyResponse {
   message_id: string;
 }
 
+export interface InstagramMedia {
+  id: string;
+  caption?: string;
+  media_type: 'IMAGE' | 'VIDEO' | 'CAROUSEL_ALBUM';
+  media_url: string;
+  permalink: string;
+  timestamp: string;
+  like_count: number;
+  comments_count: number;
+  ig_id: string; // The ID from Instagram
+}
+
+export interface InstagramComment {
+  id: string;
+  text: string;
+  username: string;
+  timestamp: string;
+  media_id: string;
+}
+
+export interface InstagramInsight {
+  name: string;
+  period: string;
+  values: { value: number; end_time: string }[];
+  title?: string;
+  description?: string;
+}
+
 export type Intent = 'GREETING' | 'PRICING' | 'FALLBACK';
+

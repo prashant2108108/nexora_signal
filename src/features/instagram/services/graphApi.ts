@@ -49,3 +49,64 @@ export async function sendInstagramMessage(
   }
 }
 
+/**
+ * Fetches a list of media objects (Posts and Reels) for the authenticated account.
+ */
+export async function getInstagramMedia(): Promise<any[]> {
+  if (!INSTAGRAM_ACCESS_TOKEN) return [];
+
+  const url = `https://graph.instagram.com/${META_API_VERSION}/me/media?fields=id,caption,media_type,media_url,permalink,timestamp,like_count,comments_count`;
+
+  try {
+    const response = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${INSTAGRAM_ACCESS_TOKEN}` },
+    });
+    const data = await response.json();
+    return data.data || [];
+  } catch (error) {
+    console.error('[Instagram] getInstagramMedia failed:', error);
+    return [];
+  }
+}
+
+/**
+ * Fetches insights for a specific media object.
+ */
+export async function getMediaInsights(mediaId: string): Promise<any[]> {
+  if (!INSTAGRAM_ACCESS_TOKEN) return [];
+
+  const url = `https://graph.instagram.com/${META_API_VERSION}/${mediaId}/insights?metric=engagement,impressions,reach,saved`;
+
+  try {
+    const response = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${INSTAGRAM_ACCESS_TOKEN}` },
+    });
+    const data = await response.json();
+    return data.data || [];
+  } catch (error) {
+    console.error('[Instagram] getMediaInsights failed:', error);
+    return [];
+  }
+}
+
+/**
+ * Fetches comments for a specific media object.
+ */
+export async function getInstagramComments(mediaId: string): Promise<any[]> {
+  if (!INSTAGRAM_ACCESS_TOKEN) return [];
+
+  const url = `https://graph.instagram.com/${META_API_VERSION}/${mediaId}/comments?fields=id,text,username,timestamp`;
+
+  try {
+    const response = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${INSTAGRAM_ACCESS_TOKEN}` },
+    });
+    const data = await response.json();
+    return data.data || [];
+  } catch (error) {
+    console.error('[Instagram] getInstagramComments failed:', error);
+    return [];
+  }
+}
+
+

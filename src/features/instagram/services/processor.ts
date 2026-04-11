@@ -1,6 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { InstagramWebhookPayload, Intent, ProcessedMessage } from '../types';
-import { sendInstagramMessage } from './graphApi';
+import { 
+  sendInstagramMessage, 
+  getInstagramMedia, 
+  getMediaInsights, 
+  getInstagramComments 
+} from './graphApi';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,19 +14,15 @@ const supabase = createClient(
 
 /**
  * Main entry point for processing incoming Instagram webhook events.
- * Handles parsing, deduplication, and triggering responses.
  */
 export async function processWebhookPayload(payload: InstagramWebhookPayload) {
   const entries = payload.entry || [];
 
   for (const entry of entries) {
-    // ✅ Correct: Instagram uses entry.messaging[], not entry.changes[]
+    // 1. Handle Messaging Events (DMs)
     const messagingEvents = entry.messaging || [];
-
     for (const event of messagingEvents) {
-      // ✅ Skip echo messages (bot's own sent messages) — prevents infinite loop
       if (event.message?.is_echo) continue;
-      // Skip delivery/read receipts
       if (!event.message?.text) continue;
 
       processSingleMessage({
@@ -29,12 +30,96 @@ export async function processWebhookPayload(payload: InstagramWebhookPayload) {
         messageText: event.message.text,
         mid: event.message.mid,
         timestamp: event.timestamp,
-      }).catch((err) => {
-        console.error('[Instagram] Error processing message:', err);
-      });
+      }).catch(err => console.error('[Instagram DM Error]', err));
+    }
+
+    // 2. Handle Changes (Feed, Comments, etc.)
+    const changes = entry.changes || [];
+    for (const change of changes) {
+      if (change.field === 'comments') {
+        await handleIncomingComment(change.value);
+      } else if (change.field === 'feed') {
+        await handleFeedChange(change.value);
+      }
     }
   }
 }
+
+/**
+ * Handles incoming comments via webhook.
+ */
+async function handleIncomingComment(value: any) {
+  const { id, text, from, timestamp, media_id } = value;
+  console.log(`[Instagram] New comment on ${media_id} from ${from?.username}: ${text}`);
+
+  await supabase.from('instagram_comments').upsert({
+    ig_id: id,
+    media_id: media_id,
+    text: text,
+    username: from?.username,
+    timestamp: new Date(timestamp * 1000).toISOString(),
+  });
+}
+
+/**
+ * Handles feed changes (likes, new posts, etc.)
+ */
+async function handleFeedChange(value: any) {
+  // Logic to handle likes or media updates
+  // Usually involves re-fetching the specific media object
+}
+
+/**
+ * Full synchronization of Media and Insights.
+ * Best triggered manually or via a cron job.
+ */
+export async function syncInstagramData() {
+  console.log('[Instagram] Starting full data sync...');
+  const mediaList = await getInstagramMedia();
+
+  for (const media of mediaList) {
+    // 1. Sync Media Info
+    await supabase.from('instagram_media').upsert({
+      ig_id: media.id,
+      caption: media.caption,
+      media_type: media.media_type,
+      media_url: media.media_url,
+      permalink: media.permalink,
+      timestamp: media.timestamp,
+      like_count: media.like_count,
+      comments_count: media.comments_count,
+    });
+
+    // 2. Sync Insights (optional but recommended)
+    const insights = await getMediaInsights(media.id);
+    for (const metric of insights) {
+      for (const value of metric.values) {
+        await supabase.from('instagram_insights').upsert({
+          metric_name: metric.name,
+          value: value.value,
+          period: metric.period,
+          target_id: media.id,
+          end_time: value.end_time,
+        });
+      }
+    }
+
+    // 3. Sync Top Comments (optional)
+    const comments = await getInstagramComments(media.id);
+    for (const comment of comments) {
+      await supabase.from('instagram_comments').upsert({
+        ig_id: comment.id,
+        media_id: media.id,
+        text: comment.text,
+        username: comment.username,
+        timestamp: comment.timestamp,
+      });
+    }
+  }
+
+  console.log(`[Instagram] Sync complete. Processed ${mediaList.length} items.`);
+}
+
 
 
 /**
@@ -74,7 +159,10 @@ async function processSingleMessage(msg: ProcessedMessage) {
       break;
   }
 
-  // 3. Store in Supabase
+  // 3. Send Reply via Graph API first to get the response confirmation
+  const apiResponse = await sendInstagramMessage(msg.senderId, replyText);
+
+  // 4. Store EVERYTHING in Supabase (Single Insert matches RLS policy)
   const { error: dbError } = await supabase.from('instagram_messages').insert({
     sender_id: msg.senderId,
     message: msg.messageText,
@@ -83,17 +171,16 @@ async function processSingleMessage(msg: ProcessedMessage) {
     metadata: {
       intent,
       timestamp: msg.timestamp,
+      api_response: apiResponse, // Now stored in the initial insert!
     },
   });
 
   if (dbError) {
     console.error('[Instagram] Supabase Insert Error:', dbError);
-    // Continue anyway to try and send the reply
   }
-
-  // 4. Send Reply via Graph API
-  await sendInstagramMessage(msg.senderId, replyText);
 }
+
+
 
 /**
  * Basic NLP logic to detect user intent from message text.
