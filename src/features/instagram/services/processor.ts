@@ -67,7 +67,7 @@ async function handleIncomingComment(value: any) {
     text: text,
     username: from?.username,
     timestamp: new Date(timestamp * 1000).toISOString(),
-  });
+  }, { onConflict: 'ig_id' });
 }
 
 /**
@@ -100,7 +100,7 @@ export async function syncInstagramData() {
       timestamp: media.timestamp,
       like_count: media.like_count,
       comments_count: media.comments_count,
-    });
+    }, { onConflict: 'ig_id' });
 
     if (mediaErr) {
       console.error(`[Instagram Sync] Error upserting media ${media.id}:`, mediaErr);
@@ -131,10 +131,10 @@ export async function syncInstagramData() {
         ig_id: comment.id,
         media_id: media.id,
         text: comment.text,
-        username: comment.username,
+        username: comment.from?.username || 'instagram_user',
         like_count: comment.like_count || 0,
         timestamp: comment.timestamp,
-      });
+      }, { onConflict: 'ig_id' });
       if (comErr) console.error(`[Instagram Sync] Error upserting comment ${comment.id}:`, comErr);
 
       // Sync replies nested under each comment
@@ -144,9 +144,9 @@ export async function syncInstagramData() {
           ig_id: reply.id,
           comment_id: comment.id,
           text: reply.text,
-          username: reply.username,
+          username: reply.from?.username || 'instagram_user',
           timestamp: reply.timestamp,
-        });
+        }, { onConflict: 'ig_id' });
         if (repErr) console.error(`[Instagram Sync] Error upserting reply ${reply.id}:`, repErr);
       }
     }

@@ -87,8 +87,8 @@ export async function getMediaInsights(mediaId: string, mediaType?: string): Pro
   const isReel = mediaType === 'VIDEO' || mediaType === 'REELS';
 
   const metrics = isReel
-    ? 'plays,reach,likes,comments,shares,saved,total_interactions,ig_reels_avg_watch_time,ig_reels_video_view_total_time'
-    : 'impressions,reach,engagement,saved,profile_visits,follows,shares,likes,comments_count';
+    ? 'plays,reach,likes,comments,shares,saved,total_interactions,ig_reels_avg_watch_time'
+    : 'reach,saved,total_interactions,likes,comments,shares,profile_visits,follows';
 
   const url = `https://graph.instagram.com/${META_API_VERSION}/${mediaId}/insights?metric=${metrics}`;
 
@@ -99,11 +99,7 @@ export async function getMediaInsights(mediaId: string, mediaType?: string): Pro
     const data = await response.json();
     if (data.error) {
       console.error(`[Instagram] Insights error for ${mediaId}:`, data.error);
-      // Try fallback with basic metrics
-      const fallbackUrl = `https://graph.instagram.com/${META_API_VERSION}/${mediaId}/insights?metric=impressions,reach,saved`;
-      const fallbackRes = await fetch(fallbackUrl, { headers: { 'Authorization': `Bearer ${INSTAGRAM_ACCESS_TOKEN}` } });
-      const fallbackData = await fallbackRes.json();
-      return fallbackData.data || [];
+      return [];
     }
     console.log('[Instagram API Response (Insights)]', JSON.stringify(data, null, 2));
     return data.data || [];
@@ -113,25 +109,35 @@ export async function getMediaInsights(mediaId: string, mediaType?: string): Pro
   }
 }
 
-
 /**
  * Fetches comments for a specific media object (includes like count and reply count).
+ * Handles pagination to fetch all comments up to a safety limit.
  */
 export async function getInstagramComments(mediaId: string): Promise<any[]> {
   if (!INSTAGRAM_ACCESS_TOKEN) return [];
 
-  const url = `https://graph.instagram.com/${META_API_VERSION}/${mediaId}/comments?fields=id,text,username,timestamp,like_count,replies{id,text,username,timestamp}`;
+  let url = `https://graph.instagram.com/${META_API_VERSION}/${mediaId}/comments?fields=id,text,timestamp,like_count,from,user,replies{id,text,timestamp,from,user}`;
+  let allComments: any[] = [];
 
   try {
-    const response = await fetch(url, {
-      headers: { 'Authorization': `Bearer ${INSTAGRAM_ACCESS_TOKEN}` },
-    });
-    const data = await response.json();
-    console.log('[Instagram API Response (Comments)]', JSON.stringify(data, null, 2));
-    return data.data || [];
+    while (url && allComments.length < 500) {  // safety limit
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${INSTAGRAM_ACCESS_TOKEN}` },
+      });
+      const data = await response.json();
+      
+      if (data.data) {
+        allComments = allComments.concat(data.data);
+      }
+      
+      url = data.paging?.next || null;
+    }
+    
+    console.log(`[Instagram API Response (Comments)] Fetched ${allComments.length} total comments for ${mediaId}`);
+    return allComments;
   } catch (error) {
     console.error('[Instagram] getInstagramComments failed:', error);
-    return [];
+    return allComments;
   }
 }
 

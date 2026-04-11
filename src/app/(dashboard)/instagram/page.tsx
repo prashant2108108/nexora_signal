@@ -1,12 +1,12 @@
 import React from 'react';
 import { createClient } from '@/shared/lib/supabase/server';
-import { 
-  MessageCircle, 
-  User, 
-  Clock, 
-  CheckCircle2, 
-  BarChart3, 
-  Image as ImageIcon, 
+import {
+  MessageCircle,
+  User,
+  Clock,
+  CheckCircle2,
+  BarChart3,
+  Image as ImageIcon,
   Heart,
   MessageSquare
 } from 'lucide-react';
@@ -19,7 +19,7 @@ export const metadata = {
 
 export default async function InstagramDashboardPage() {
   const supabase = await createClient();
-  
+
   // Fetch everything in parallel
   const [
     { data: messages, error: messagesError },
@@ -40,9 +40,12 @@ export default async function InstagramDashboardPage() {
     messagesCount: messages?.length || 0,
     mediaCount: media?.length || 0,
     insightsCount: insights?.length || 0,
+    commentsCount: comments?.length || 0,
+    repliesCount: replies?.length || 0,
     errors: { messagesError, mediaError, insightsError }
   });
-
+  console.log('[Instagram Dashboard] Raw Insights:', JSON.stringify(insights?.slice(0, 5), null, 2));
+  console.log('[Instagram Dashboard] Raw Comments (first 3):', JSON.stringify(comments?.slice(0, 3), null, 2));
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -247,73 +250,108 @@ export default async function InstagramDashboardPage() {
           </div>
         )}
       </div>
-      {/* Comments Section */}
+      {/* Comments per Post */}
       <div>
         <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
           <MessageSquare className="w-5 h-5 text-blue-500" />
           Post Comments & Replies
         </h2>
-        {!comments || comments.length === 0 ? (
+        {!media || media.length === 0 ? (
           <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-8 text-center">
-            <p className="text-slate-500 dark:text-zinc-400">No comments synced yet. Click &quot;Sync Now&quot; to fetch.</p>
+            <p className="text-slate-500 dark:text-zinc-400">No posts found. Click &quot;Sync Now&quot; to fetch.</p>
           </div>
         ) : (
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden shadow-sm divide-y divide-slate-100 dark:divide-zinc-800">
-            {comments.map((c: any) => {
-              const post = media?.find((m: any) => m.ig_id === c.media_id);
-              const commentReplies = replies?.filter((r: any) => r.comment_id === c.ig_id) || [];
+          <div className="space-y-6">
+            {media.map((post: any) => {
+              const postComments = comments?.filter((c: any) => c.media_id === post.ig_id) || [];
               return (
-                <div key={c.id} className="px-6 py-4">
-                  {/* Comment Row */}
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0 mt-0.5">
-                      <User className="w-4 h-4 text-blue-600" />
+                <div key={post.id} className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden shadow-sm">
+                  {/* Post header */}
+                  <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-zinc-800">
+                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 dark:bg-zinc-800 shrink-0">
+                      {post.media_url && <img src={post.media_url} alt="" className="w-full h-full object-cover" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-semibold text-slate-900 dark:text-white">@{c.username}</span>
-                        {post && (
-                          <a href={post.permalink} target="_blank" rel="noopener noreferrer"
-                            className="text-xs text-purple-600 dark:text-purple-400 hover:underline">
-                            on &ldquo;{post.caption?.substring(0, 25) || 'post'}&rdquo;
-                          </a>
-                        )}
-                        <span className="text-xs text-slate-400 ml-auto">{new Date(c.timestamp).toLocaleString()}</span>
-                      </div>
-                      <p className="text-sm text-slate-700 dark:text-zinc-300 mt-1">{c.text}</p>
-                      <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-400">
-                        <span className="flex items-center gap-1"><Heart className="w-3 h-3 text-red-400" />{c.like_count || 0} likes</span>
-                        {commentReplies.length > 0 && (
-                          <span className="flex items-center gap-1"><MessageSquare className="w-3 h-3 text-blue-400" />{commentReplies.length} replies</span>
-                        )}
-                      </div>
-                      {/* Replies */}
-                      {commentReplies.length > 0 && (
-                        <div className="mt-3 pl-4 border-l-2 border-slate-100 dark:border-zinc-700 space-y-3">
-                          {commentReplies.map((r: any) => (
-                            <div key={r.id} className="flex items-start gap-2">
-                              <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
-                                <User className="w-3 h-3 text-slate-500" />
+                      <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                        {post.caption?.substring(0, 60) || 'No caption'}
+                      </p>
+                      <p className="text-xs text-slate-400">{new Date(post.timestamp).toLocaleDateString()} · {postComments.length} comments</p>
+                    </div>
+                    <a href={post.permalink} target="_blank" rel="noopener noreferrer"
+                      className="text-xs text-purple-500 hover:underline shrink-0">View ↗</a>
+                  </div>
+
+                  {/* Comments */}
+                  {postComments.length === 0 ? (
+                    <div className="px-5 py-6 text-center text-sm text-slate-400">No comments synced for this post.</div>
+                  ) : (
+                    <div className="divide-y divide-slate-50 dark:divide-zinc-800/50">
+                      {postComments.map((c: any) => {
+                        const name = c.username || 'instagram_user';
+                        const initials = name.charAt(0).toUpperCase();
+                        const commentReplies = replies?.filter((r: any) => r.comment_id === c.ig_id) || [];
+                        return (
+                          <div key={c.id} className="px-5 py-3">
+                            <div className="flex items-start gap-3">
+                              {/* Initials Avatar */}
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                                {initials}
                               </div>
-                              <div>
-                                <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">@{r.username}</span>
-                                <p className="text-xs text-slate-600 dark:text-zinc-400">{r.text}</p>
-                                <span className="text-[10px] text-slate-400">{new Date(r.timestamp).toLocaleString()}</span>
+                              <div className="flex-1 bg-slate-50 dark:bg-zinc-800 rounded-xl px-3 py-2">
+                                <div className="flex items-baseline gap-2">
+                                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                                    {c.username ? `@${c.username}` : 'instagram user'}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400">{new Date(c.timestamp).toLocaleString()}</span>
+                                </div>
+                                <p className="text-sm text-slate-700 dark:text-zinc-300 mt-0.5">{c.text}</p>
+                                {(c.like_count > 0) && (
+                                  <div className="flex items-center gap-1 mt-1 text-xs text-slate-400">
+                                    <Heart className="w-3 h-3 text-red-400" /> {c.like_count} likes
+                                  </div>
+                                )}
                               </div>
                             </div>
-                          ))}
-                        </div>
-                      )}
+
+                            {/* Replies */}
+                            {commentReplies.length > 0 && (
+                              <div className="ml-11 mt-2 space-y-2">
+                                {commentReplies.map((r: any) => {
+                                  const rName = r.username || 'instagram_user';
+                                  return (
+                                    <div key={r.id} className="flex items-start gap-2">
+                                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-400 to-blue-500 flex items-center justify-center text-white text-[10px] font-bold shrink-0">
+                                        {rName.charAt(0).toUpperCase()}
+                                      </div>
+                                      <div className="flex-1 bg-slate-50 dark:bg-zinc-800/50 rounded-xl px-3 py-1.5">
+                                        <div className="flex items-baseline gap-2">
+                                          <span className="text-xs font-semibold text-slate-800 dark:text-zinc-200">
+                                            {r.username ? `@${r.username}` : 'instagram user'}
+                                          </span>
+                                          <span className="text-[10px] text-slate-400">{new Date(r.timestamp).toLocaleString()}</span>
+                                        </div>
+                                        <p className="text-xs text-slate-600 dark:text-zinc-400">{r.text}</p>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
-                  </div>
+                  )}
                 </div>
               );
             })}
           </div>
         )}
       </div>
+
+
+
     </div>
   );
 }
-
 
