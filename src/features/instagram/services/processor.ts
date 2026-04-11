@@ -74,12 +74,15 @@ async function handleFeedChange(value: any) {
  * Best triggered manually or via a cron job.
  */
 export async function syncInstagramData() {
-  console.log('[Instagram] Starting full data sync...');
+  console.log('[Instagram Sync] Starting full data sync...');
   const mediaList = await getInstagramMedia();
+  console.log(`[Instagram Sync] Found ${mediaList.length} media items from Meta`);
 
   for (const media of mediaList) {
+    console.log(`[Instagram Sync] Processing media: ${media.id}`);
+    
     // 1. Sync Media Info
-    await supabase.from('instagram_media').upsert({
+    const { error: mediaErr } = await supabase.from('instagram_media').upsert({
       ig_id: media.id,
       caption: media.caption,
       media_type: media.media_type,
@@ -90,35 +93,45 @@ export async function syncInstagramData() {
       comments_count: media.comments_count,
     });
 
-    // 2. Sync Insights (optional but recommended)
+    if (mediaErr) {
+      console.error(`[Instagram Sync] Error upserting media ${media.id}:`, mediaErr);
+      continue;
+    }
+
+    // 2. Sync Insights
     const insights = await getMediaInsights(media.id);
+    console.log(`[Instagram Sync] Fetched insights for ${media.id}: ${insights.length} metrics`);
     for (const metric of insights) {
       for (const value of metric.values) {
-        await supabase.from('instagram_insights').upsert({
+        const { error: insErr } = await supabase.from('instagram_insights').upsert({
           metric_name: metric.name,
           value: value.value,
           period: metric.period,
           target_id: media.id,
           end_time: value.end_time,
         });
+        if (insErr) console.error(`[Instagram Sync] Error upserting insight ${metric.name}:`, insErr);
       }
     }
 
-    // 3. Sync Top Comments (optional)
+    // 3. Sync Top Comments
     const comments = await getInstagramComments(media.id);
+    console.log(`[Instagram Sync] Fetched comments for ${media.id}: ${comments.length} items`);
     for (const comment of comments) {
-      await supabase.from('instagram_comments').upsert({
+      const { error: comErr } = await supabase.from('instagram_comments').upsert({
         ig_id: comment.id,
         media_id: media.id,
         text: comment.text,
         username: comment.username,
         timestamp: comment.timestamp,
       });
+      if (comErr) console.error(`[Instagram Sync] Error upserting comment ${comment.id}:`, comErr);
     }
   }
 
-  console.log(`[Instagram] Sync complete. Processed ${mediaList.length} items.`);
+  console.log(`[Instagram Sync] All operations complete.`);
 }
+
 
 
 

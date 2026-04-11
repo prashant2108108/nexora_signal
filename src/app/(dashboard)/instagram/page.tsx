@@ -22,14 +22,22 @@ export default async function InstagramDashboardPage() {
   
   // Fetch everything in parallel
   const [
-    { data: messages },
-    { data: media },
-    { data: insights }
+    { data: messages, error: messagesError },
+    { data: media, error: mediaError },
+    { data: insights, error: insightsError }
   ] = await Promise.all([
     supabase.from('instagram_messages').select('*').order('created_at', { ascending: false }),
     supabase.from('instagram_media').select('*').order('timestamp', { ascending: false }),
     supabase.from('instagram_insights').select('*').order('end_time', { ascending: false }).limit(20)
   ]);
+
+  console.log('[Instagram Dashboard] Data Summary:', {
+    messagesCount: messages?.length || 0,
+    mediaCount: media?.length || 0,
+    insightsCount: insights?.length || 0,
+    errors: { messagesError, mediaError, insightsError }
+  });
+
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">

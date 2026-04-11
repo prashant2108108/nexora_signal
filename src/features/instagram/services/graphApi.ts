@@ -35,6 +35,7 @@ export async function sendInstagramMessage(
     });
 
     const data = await response.json();
+    console.log('[Instagram API Response (Message)]', JSON.stringify(data, null, 2));
 
     if (!response.ok) {
       console.error('Instagram API Error:', data);
@@ -62,12 +63,18 @@ export async function getInstagramMedia(): Promise<any[]> {
       headers: { 'Authorization': `Bearer ${INSTAGRAM_ACCESS_TOKEN}` },
     });
     const data = await response.json();
+    console.log('[Instagram API Response (Media)]', JSON.stringify(data, null, 2));
+    if (data.error) {
+      console.error('[Instagram API Error Body]', JSON.stringify(data.error, null, 2));
+    }
+
     return data.data || [];
   } catch (error) {
     console.error('[Instagram] getInstagramMedia failed:', error);
     return [];
   }
 }
+
 
 /**
  * Fetches insights for a specific media object.
@@ -82,6 +89,7 @@ export async function getMediaInsights(mediaId: string): Promise<any[]> {
       headers: { 'Authorization': `Bearer ${INSTAGRAM_ACCESS_TOKEN}` },
     });
     const data = await response.json();
+    console.log('[Instagram API Response (Insights)]', JSON.stringify(data, null, 2));
     return data.data || [];
   } catch (error) {
     console.error('[Instagram] getMediaInsights failed:', error);
@@ -102,6 +110,7 @@ export async function getInstagramComments(mediaId: string): Promise<any[]> {
       headers: { 'Authorization': `Bearer ${INSTAGRAM_ACCESS_TOKEN}` },
     });
     const data = await response.json();
+    console.log('[Instagram API Response (Comments)]', JSON.stringify(data, null, 2));
     return data.data || [];
   } catch (error) {
     console.error('[Instagram] getInstagramComments failed:', error);
