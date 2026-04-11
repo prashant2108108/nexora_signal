@@ -7,10 +7,19 @@ import {
   getInstagramComments 
 } from './graphApi';
 
+// Anon client for public webhook operations
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
+
+// Service role client bypasses RLS — used for server-side sync writes
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+
 
 /**
  * Main entry point for processing incoming Instagram webhook events.
@@ -82,7 +91,7 @@ export async function syncInstagramData() {
     console.log(`[Instagram Sync] Processing media: ${media.id}`);
     
     // 1. Sync Media Info
-    const { error: mediaErr } = await supabase.from('instagram_media').upsert({
+    const { error: mediaErr } = await supabaseAdmin.from('instagram_media').upsert({
       ig_id: media.id,
       caption: media.caption,
       media_type: media.media_type,
@@ -103,7 +112,7 @@ export async function syncInstagramData() {
     console.log(`[Instagram Sync] Fetched insights for ${media.id}: ${insights.length} metrics`);
     for (const metric of insights) {
       for (const value of metric.values) {
-        const { error: insErr } = await supabase.from('instagram_insights').upsert({
+        const { error: insErr } = await supabaseAdmin.from('instagram_insights').upsert({
           metric_name: metric.name,
           value: value.value,
           period: metric.period,
@@ -118,7 +127,7 @@ export async function syncInstagramData() {
     const comments = await getInstagramComments(media.id);
     console.log(`[Instagram Sync] Fetched comments for ${media.id}: ${comments.length} items`);
     for (const comment of comments) {
-      const { error: comErr } = await supabase.from('instagram_comments').upsert({
+      const { error: comErr } = await supabaseAdmin.from('instagram_comments').upsert({
         ig_id: comment.id,
         media_id: media.id,
         text: comment.text,
