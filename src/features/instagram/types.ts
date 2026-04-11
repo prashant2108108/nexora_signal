@@ -6,7 +6,20 @@ export interface InstagramWebhookPayload {
 export interface InstagramEntry {
   id: string;
   time: number;
-  changes: InstagramChange[];
+  changes?: InstagramChange[];
+  messaging?: InstagramMessagingEvent[];
+}
+
+export interface InstagramMessagingEvent {
+  sender: { id: string };
+  recipient: { id: string };
+  timestamp: number;
+  message?: {
+    mid: string;
+    text?: string;
+    is_echo?: boolean;
+    attachments?: any[];
+  };
 }
 
 export interface InstagramChange {
@@ -17,6 +30,7 @@ export interface InstagramChange {
 export interface InstagramValue {
   messages?: InstagramMessage[];
 }
+
 
 export interface InstagramMessage {
   from: {

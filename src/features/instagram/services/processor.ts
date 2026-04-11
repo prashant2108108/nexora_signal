@@ -15,26 +15,27 @@ export async function processWebhookPayload(payload: InstagramWebhookPayload) {
   const entries = payload.entry || [];
 
   for (const entry of entries) {
-    const changes = entry.changes || [];
-    for (const change of changes) {
-      if (change.field === 'messages') {
-        const messages = change.value.messages || [];
-        for (const message of messages) {
-          // Trigger asynchronous processing for each message
-          // In a production environment with high volume, consider using a queue.
-          processSingleMessage({
-            senderId: message.from.id,
-            messageText: message.text,
-            mid: message.id,
-            timestamp: message.timestamp,
-          }).catch((err) => {
-            console.error('[Instagram] Error processing message:', err);
-          });
-        }
-      }
+    // ✅ Correct: Instagram uses entry.messaging[], not entry.changes[]
+    const messagingEvents = entry.messaging || [];
+
+    for (const event of messagingEvents) {
+      // ✅ Skip echo messages (bot's own sent messages) — prevents infinite loop
+      if (event.message?.is_echo) continue;
+      // Skip delivery/read receipts
+      if (!event.message?.text) continue;
+
+      processSingleMessage({
+        senderId: event.sender.id,
+        messageText: event.message.text,
+        mid: event.message.mid,
+        timestamp: event.timestamp,
+      }).catch((err) => {
+        console.error('[Instagram] Error processing message:', err);
+      });
     }
   }
 }
+
 
 /**
  * Processes a single message: deduplication, NLP, storage, and reply.
