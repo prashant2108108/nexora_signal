@@ -189,6 +189,12 @@ export async function syncInstagramData() {
  */
 async function processSingleMessage(msg: ProcessedMessage) {
   console.log(`[Instagram] Processing message from ${msg.senderId}: ${msg.messageText}`);
+    console.log('[Debug] ENV check:', {
+    hasToken: !!process.env.INSTAGRAM_ACCESS_TOKEN,
+    tokenLength: process.env.INSTAGRAM_ACCESS_TOKEN?.length,
+    hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+    hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+  });
 
   try {
     // FIX 1: Use supabaseAdmin to bypass RLS
