@@ -23,7 +23,6 @@ export async function sendInstagramMessage(
     return null;
   }
 
-  // ✅ FIXED endpoint
   const url = `https://graph.facebook.com/v25.0/me/messages`;
 
   const payload = {
@@ -31,7 +30,7 @@ export async function sendInstagramMessage(
     message: { text },
   };
 
-  console.log("[DEBUG] URL:", url);
+  // ✅ 👉 ADD HERE (BEFORE FETCH)
   console.log("[DEBUG] Payload:", JSON.stringify(payload, null, 2));
 
   try {
@@ -44,11 +43,11 @@ export async function sendInstagramMessage(
       body: JSON.stringify(payload),
     });
 
-    // 🔥 IMPORTANT DEBUG
+    // ✅ 👉 ADD HERE (AFTER FETCH)
     console.log("[DEBUG] HTTP Status:", response.status);
     console.log("[DEBUG] Status Text:", response.statusText);
 
-    const textResponse = await response.text(); // 👈 raw response first
+    const textResponse = await response.text();
     console.log("[DEBUG] Raw Response:", textResponse);
 
     let data;
@@ -61,7 +60,7 @@ export async function sendInstagramMessage(
 
     console.log("[DEBUG] Parsed Response:", JSON.stringify(data, null, 2));
 
-    // 🔴 META ERROR FORMAT
+    // 🔴 META ERROR
     if (data.error) {
       console.error("❌ META API ERROR:");
       console.error("Type:", data.error.type);
@@ -73,7 +72,7 @@ export async function sendInstagramMessage(
     }
 
     if (!response.ok) {
-      console.error("[Instagram] ❌ HTTP Error but no meta error:", data);
+      console.error("[Instagram] ❌ HTTP Error:", data);
       return null;
     }
 
@@ -87,7 +86,6 @@ export async function sendInstagramMessage(
     return null;
   }
 }
-
 /**
  * Fetches a list of media objects (Posts and Reels) for the authenticated account.
  */
