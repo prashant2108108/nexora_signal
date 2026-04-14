@@ -175,22 +175,22 @@ async function processSingleMessage(msg: ProcessedMessage) {
   try {
     // STEP 1: Dedup
     console.log("[STEP 1] Checking duplicate...");
-    const { data: existing, error: dedupError } = await supabaseAdmin
-      .from('instagram_messages')
-      .select('id')
-      .eq('mid', msg.mid)
-      .maybeSingle();
+    // const { data: existing, error: dedupError } = await supabaseAdmin
+    //   .from('instagram_messages')
+    //   .select('id')
+    //   .eq('mid', msg.mid)
+    //   .maybeSingle();
 
-    console.log("[STEP 1 DONE] existing:", existing);
+    // console.log("[STEP 1 DONE] existing:", existing);
 
-    if (dedupError) {
-      console.error('[STEP 1 ERROR] Dedup error:', dedupError);
-    }
+    // if (dedupError) {
+    //   console.error('[STEP 1 ERROR] Dedup error:', dedupError);
+    // }
 
-    if (existing) {
-      console.log(`[STEP 1 EXIT] Duplicate message: ${msg.mid}`);
-      return;
-    }
+    // if (existing) {
+    //   console.log(`[STEP 1 EXIT] Duplicate message: ${msg.mid}`);
+    //   return;
+    // }
 
     // STEP 2: Intent
     console.log("[STEP 2] Detecting intent...");
